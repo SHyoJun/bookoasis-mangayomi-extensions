@@ -19,10 +19,27 @@ https://raw.githubusercontent.com/SHyoJun/bookoasis-mangayomi-extensions/main/in
 - 아이디/비밀번호는 공개 저장소에 넣지 마세요. 앱 설정/백업과 화면 공유에도 주의하세요.
 - 서버 계정 권한을 우회하지 않습니다.
 
+## 소설 확장 (EPUB / TXT)
+
+Mangayomi의 **소설 확장 저장소**에는 아래 URL을 별도로 추가하세요.
+
+```
+https://raw.githubusercontent.com/SHyoJun/bookoasis-mangayomi-extensions/main/novel_index.json
+```
+
+목록을 새로고침하고 **BookOasis Novel**(언어 all)을 설치한 뒤, 이 확장에도 서버 주소와 계정을 설정합니다. 만화 확장의 설정은 자동으로 공유되지 않습니다.
+
+- EPUB: BookOasis 메타 API의 spine 순서와 목차를 사용하며, 선택한 장의 본문만 가져옵니다.
+- TXT: BookOasis 서버에서 UTF-8로 변환한 본문을 가져와 문단/줄바꿈을 표시합니다. TXT 한 권은 한 항목이며 본문 전체를 가져옵니다.
+- EPUB 본문은 텍스트 중심으로 표시합니다. 삽화·외부 리소스·복잡한 CSS·스크립트는 제외합니다.
+- PDF는 아직 지원하지 않습니다.
+- 시리즈 상세를 열 때 그 시리즈의 EPUB 권별 메타데이터를 순차 조회합니다. 모든 장의 본문을 미리 받지는 않습니다.
+- 공통 목록 API를 사용하므로 만화 시리즈도 목록에 보일 수 있습니다. EPUB/TXT가 없는 시리즈는 읽을 항목이 없다는 안내를 표시합니다. 필요하면 소설 라이브러리 ID를 설정하세요.
+
 ## 지원 범위
 
-시리즈 목록, 이름 검색, 페이지네이션, 표지/작가/설명, ZIP/CBZ 권 목록 및 이미지 페이지 URL/인증 헤더를 구현했습니다.
-**현재 EPUB/PDF/TXT는 이 확장에서 미지원**입니다. Mangayomi 자체의 소설/EPUB 지원 여부와는 별개입니다.
+기존 BookOasis 만화 소스는 ZIP/CBZ를 그대로 지원하고, BookOasis Novel 소스는 EPUB/TXT를 지원합니다.
+시리즈 목록, 이름 검색, 페이지네이션, 표지/작가/설명을 제공합니다.
 서버 독서 진행률 동기화, 다음 권 미리읽기 및 자동 재스캔은 하지 않습니다.
 
 ## 검증 상태

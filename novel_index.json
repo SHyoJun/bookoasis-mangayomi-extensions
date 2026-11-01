@@ -1,0 +1,24 @@
+[
+  {
+    "name": "BookOasis Novel",
+    "id": 194159997,
+    "baseUrl": "https://bookoasis.invalid",
+    "lang": "all",
+    "typeSource": "single",
+    "iconUrl": "https://raw.githubusercontent.com/SHyoJun/bookoasis-mangayomi-extensions/main/icon.png",
+    "dateFormat": "",
+    "dateFormatLocale": "",
+    "isNsfw": false,
+    "hasCloudflare": false,
+    "sourceCodeUrl": "https://raw.githubusercontent.com/SHyoJun/bookoasis-mangayomi-extensions/main/bookoasis-novel.js",
+    "apiUrl": "",
+    "version": "0.1.0",
+    "isManga": false,
+    "itemType": 2,
+    "isFullData": false,
+    "appMinVerReq": "",
+    "additionalParams": "",
+    "sourceCodeLanguage": 1,
+    "notes": "EPUB chapters and UTF-8 TXT via BookOasis. Configure server and account. Text-first; embedded EPUB images and PDF are not supported."
+  }
+]
