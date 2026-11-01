@@ -1,0 +1,24 @@
+[
+  {
+    "name": "BookOasis",
+    "id": 126405173,
+    "baseUrl": "https://bookoasis.invalid",
+    "lang": "all",
+    "typeSource": "single",
+    "iconUrl": "https://raw.githubusercontent.com/SHyoJun/bookoasis-mangayomi-extensions/main/icon.png",
+    "dateFormat": "",
+    "dateFormatLocale": "",
+    "isNsfw": false,
+    "hasCloudflare": false,
+    "sourceCodeUrl": "https://raw.githubusercontent.com/SHyoJun/bookoasis-mangayomi-extensions/main/bookoasis.js",
+    "apiUrl": "",
+    "version": "0.1.0",
+    "isManga": true,
+    "itemType": 0,
+    "isFullData": false,
+    "appMinVerReq": "",
+    "additionalParams": "",
+    "sourceCodeLanguage": 1,
+    "notes": "Configure your BookOasis server and account in source settings. ZIP/CBZ only; EPUB/TXT support is not implemented."
+  }
+]
