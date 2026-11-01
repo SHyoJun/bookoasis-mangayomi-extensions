@@ -6,7 +6,7 @@ class DefaultExtension extends BookOasisBase {
 
   cleanHtmlContent(html) {
     // Text-first reader: no scripts, embedded frames, external resources or credentials in URLs.
-    let text = String(html || "").replace(/<!--[\s\S]*?-->/g, "")
+    let text = String(html || "").replace(/\r\n?|\n|\\r\\n|\\r|\\n/g, " ").replace(/<!--[\s\S]*?-->/g, "")
       .replace(/<(script|style|iframe|object|svg|math)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "");
     const allowed = /^(p|br|div|h[1-6]|em|strong|b|i|u|s|blockquote|ul|ol|li|hr|sup|sub|ruby|rt|rp)$/i;
     return (text.match(/<[^>]*>|[^<]+|</g) || []).map(token => {
@@ -36,21 +36,7 @@ class DefaultExtension extends BookOasisBase {
       if (String(book.file_format).toLowerCase() === "txt") {
         chapters.push({name: title + " [TXT]", url: "/api/media/txt?" + this.query(params), scanlator: "BookOasis"});
       } else {
-        // Metadata only. Do not fetch all chapter bodies or preload other volumes.
-        const info = await this.json("/api/media/epub/meta?" + this.query(params));
-        const count = Number(info.total_chapters);
-        if (!Number.isInteger(count) || count < 1 || count > 50000) {
-          throw new Error("EPUB 목차를 읽을 수 없습니다: " + title);
-        }
-        const titles = {};
-        for (const toc of (Array.isArray(info.toc) ? info.toc : [])) {
-          const idx = Number(toc.chapter_idx);
-          if (Number.isInteger(idx) && idx >= 0 && idx < count && toc.title && titles[idx] === undefined) titles[idx] = String(toc.title);
-        }
-        for (let idx = 0; idx < count; idx++) {
-          chapters.push({name: title + " — " + (titles[idx] || (idx + 1) + "장"),
-            url: "/api/media/epub/chapter?" + this.query({...params, chapter_idx: idx}), scanlator: "BookOasis"});
-        }
+        chapters.push({name: title + " [EPUB]", url: "/api/media/epub?" + this.query(params), scanlator: "BookOasis"});
       }
     }
     let description = String(meta.summary || "");
@@ -82,13 +68,27 @@ class DefaultExtension extends BookOasisBase {
   }
 
   async getHtmlContent(name, url) {
-    const path = this.relative(url, /^\/api\/media\/(?:txt|epub\/chapter)\?/);
+    const path = this.relative(url, /^\/api\/media\/(?:txt|epub(?:\/chapter)?)\?/);
     this.dbType(this.param(path, "db_type"));
     if (!/^\d+$/.test(this.param(path, "book_id"))) throw new Error("잘못된 책 ID입니다.");
     if (path.startsWith("/api/media/txt?")) {
       const body = (await this.txt(path)).replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
       // BookOasis performs CP949/EUC-KR conversion; never interpret TXT as markup.
       return body.split(/\n\s*\n/).map(p => "<p>" + this.escape(p).replace(/\n/g, "<br>") + "</p>").join("\n");
+    }
+    if (path.startsWith("/api/media/epub?")) {
+      const query = this.query({db_type: this.param(path, "db_type"), book_id: this.param(path, "book_id")});
+      const meta = await this.json("/api/media/epub/meta?" + query);
+      const count = Number(meta.total_chapters);
+      if (!Number.isInteger(count) || count < 1 || count > 50000) throw new Error("EPUB 목차를 읽을 수 없습니다.");
+      // Fetch sequentially: do not overload the server or silently skip failed spine entries.
+      const parts = [];
+      for (let idx = 0; idx < count; idx++) {
+        const chapter = await this.json("/api/media/epub/chapter?" + query + "&chapter_idx=" + idx);
+        if (typeof chapter.content !== "string") throw new Error("EPUB " + (idx + 1) + "장 본문 누락. 다시 시도하세요.");
+        parts.push(this.cleanHtmlContent(chapter.content));
+      }
+      return parts.join("<hr>");
     }
     if (!/^\d+$/.test(this.param(path, "chapter_idx"))) throw new Error("잘못된 EPUB 장 번호입니다.");
     const data = await this.json(path);

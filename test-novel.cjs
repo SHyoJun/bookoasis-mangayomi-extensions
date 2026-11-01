@@ -13,9 +13,9 @@ function make(handler){
 }
 const json=(data)=>({statusCode:200,headers:{'content-type':'application/json'},body:JSON.stringify(data)});
 const detail='/api/media/detail?type=general&library_id=all&series=test';
-test('EPUB metadata creates all spine chapters including entries missing from TOC',async()=>{
+test('EPUB is one book entry without loading metadata or bodies',async()=>{
  const {ext,calls}=make(url=>url.includes('/detail?')?json({meta:{},books:[{id:1,title:'Book',file_format:'epub'},{id:2,title:'Comic',file_format:'cbz'}]}):json({total_chapters:3,toc:[{title:'Opening',chapter_idx:0},{title:'Nested duplicate',chapter_idx:0},{title:'Bad link',chapter_idx:-1}]}));
- const d=await ext.getDetail(detail);assert.equal(d.chapters.length,3);assert.equal(d.chapters[2].name,'Book — Opening');assert.match(d.chapters[0].url,/chapter_idx=2/);assert.equal(calls.length,2);
+ const d=await ext.getDetail(detail);assert.equal(d.chapters.length,1);assert.equal(d.chapters[0].name,'Book [EPUB]');assert.match(d.chapters[0].url,/\/epub\?/);assert.equal(calls.length,1);
 });
 test('TXT-only detail does not fetch text before opening',async()=>{
  const {ext,calls}=make(()=>json({books:[{id:2,title:'Text',file_format:'TXT'}]}));const d=await ext.getDetail(detail);assert.match(d.chapters[0].url,/\/txt\?/);assert.equal(calls.length,1);
@@ -42,14 +42,34 @@ test('external URLs and malformed chapter IDs never make requests',async()=>{
  assert.equal(calls.length,0);
 });
 test('empty/invalid EPUB metadata fails visibly',async()=>{
- const {ext}=make(url=>url.includes('detail?')?json({books:[{id:1,title:'Book',file_format:'epub'}]}):json({total_chapters:0}));await assert.rejects(()=>ext.getDetail(detail),/목차/);
+ const {ext}=make(()=>json({total_chapters:0}));await assert.rejects(()=>ext.getHtmlContent('x','/api/media/epub?db_type=general&book_id=1'),/목차/);
 });
+test('whole EPUB includes every spine entry in order without CR escapes',async()=>{
+ const {ext,calls}=make(url=>url.includes('/meta?')?json({total_chapters:3}):json({content:'<p>part'+new URL(url).searchParams.get('chapter_idx')+'\r\n</p>\\r'}));
+ const html=await ext.getHtmlContent('x','/api/media/epub?db_type=general&book_id=1');
+ assert.equal(calls.length,4);assert.ok(html.indexOf('part0')<html.indexOf('part1'));assert.ok(html.indexOf('part1')<html.indexOf('part2'));assert.ok(!/[\r\n]/.test(html));assert.ok(!html.includes('\\r'));
+});
+test('whole EPUB fails rather than returning a truncated book',async()=>{
+ const {ext}=make(url=>url.includes('/meta?')?json({total_chapters:3}):url.includes('chapter_idx=1')?json({}):json({content:'<p>text</p>'}));
+ await assert.rejects(()=>ext.getHtmlContent('x','/api/media/epub?db_type=general&book_id=1'),/본문 누락/);
+});
+if(process.env.BOOKOASIS_REAL_FULL){
+ test('complete real EPUB is assembled from all server spine entries',async()=>{
+ const d=JSON.parse(fs.readFileSync(process.env.BOOKOASIS_REAL_FULL,'utf8'));
+ assert.equal(d.error,null);assert.equal(d.book.chapters.length,d.meta.total_chapters);
+ const {ext,calls}=make(url=>url.includes('/meta?')?json(d.meta):json(d.book.chapters[Number(new URL(url).searchParams.get('chapter_idx'))]));
+ const html=await ext.getHtmlContent('x','/api/media/epub?db_type=general&book_id=1');
+ assert.equal(html,d.book.chapters.map(c=>ext.cleanHtmlContent(c.content)).join('<hr>'));
+ assert.equal(calls.length,d.meta.total_chapters+1);assert.ok(!html.includes('\\r'));assert.ok(!html.includes('\r'));
+ console.log('Verified complete real EPUB:',d.meta.total_chapters,'spine entries;',html.length,'HTML characters');
+ });
+}
 if(process.env.BOOKOASIS_REAL_META && process.env.BOOKOASIS_REAL_CHAPTER){
  test('real server EPUB parser output maps to Mangayomi chapters and readable HTML',async()=>{
  const m=JSON.parse(fs.readFileSync(process.env.BOOKOASIS_REAL_META,'utf8'));const c=JSON.parse(fs.readFileSync(process.env.BOOKOASIS_REAL_CHAPTER,'utf8'));
  assert.equal(m.error,null);assert.equal(c.error,null);
  const {ext}=make(url=>url.includes('/detail?')?json({books:[{id:1,title:'Real EPUB parser fixture',file_format:'epub'}]}):url.includes('/meta?')?json(m.meta):json(c.chapter));
- const d=await ext.getDetail(detail);assert.equal(d.chapters.length,m.meta.total_chapters);
+ const d=await ext.getDetail(detail);assert.equal(d.chapters.length,1);
  const html=await ext.getHtmlContent('x','/api/media/epub/chapter?db_type=general&book_id=1&chapter_idx=3');assert.ok(html.length>0);assert.ok(!/<(?:script|img|iframe)\b/i.test(html));
  console.log('Real EPUB:',d.chapters.length,'chapters; rendered chapter characters:',html.length);
  });
